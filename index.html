@@ -91,7 +91,7 @@
   .table-scroll { overflow-x:auto; }
   table { width:100%; border-collapse:collapse; font-size:11px; table-layout:fixed; }
   thead tr { background:var(--primary); }
-  thead th { padding:8px 6px; color:rgba(255,255,255,.75); font-weight:700; font-size:9px; text-transform:uppercase; letter-spacing:.02em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  thead th { padding:8px 6px; color:rgba(255,255,255,.75); font-weight:700; font-size:9px; text-transform:uppercase; letter-spacing:.02em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-align:left; }
   thead th:nth-child(n+4) { text-align:right; }
   tbody tr:nth-child(even) { background:#f9fafc; }
   tbody tr:hover { background:#f0f3f8; }
@@ -100,7 +100,7 @@
   tfoot tr { background:#f0f3f8; border-top:2px solid var(--border); }
   tfoot td { padding:7px 6px; font-weight:800; font-size:11px; overflow:hidden; text-overflow:ellipsis; }
   tfoot td:nth-child(n+4) { text-align:right; }
-  .pct-bar { display:flex; align-items:center; gap:4px; }
+  .pct-bar { display:flex; align-items:center; justify-content:flex-end; gap:4px; }
   .pct-track { width:28px; height:4px; background:#edf0f5; border-radius:2px; overflow:hidden; flex-shrink:0; }
   .pct-fill-bar { height:100%; border-radius:2px; }
   .code-cell { font-weight:700; font-size:9px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
@@ -408,9 +408,9 @@ function renderDashboard(d) {
         <div class="table-scroll">
           <table>
             <colgroup>
-              <col style="width:8%"><col style="width:10%"><col style="width:24%">
-              <col style="width:12%"><col style="width:8%"><col style="width:12%">
-              <col style="width:12%"><col style="width:14%">
+              <col style="width:8%"><col style="width:10%"><col style="width:22%">
+              <col style="width:12%"><col style="width:9%"><col style="width:12%">
+              <col style="width:12%"><col style="width:15%">
             </colgroup>
             <thead><tr>
               <th>Código</th><th>Cliente</th><th>Proyecto</th>
