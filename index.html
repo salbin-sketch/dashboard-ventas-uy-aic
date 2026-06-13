@@ -89,26 +89,26 @@
   /* TABLE */
   .table-wrap { background:#fff; border:1px solid var(--border); border-radius:12px; overflow:hidden; }
   .table-scroll { overflow-x:auto; }
-  table { width:100%; border-collapse:collapse; font-size:12px; }
+  table { width:100%; border-collapse:collapse; font-size:11px; table-layout:fixed; }
   thead tr { background:var(--primary); }
-  thead th { padding:9px 12px; color:rgba(255,255,255,.75); font-weight:700; font-size:10px; text-transform:uppercase; letter-spacing:.03em; white-space:nowrap; }
+  thead th { padding:8px 6px; color:rgba(255,255,255,.75); font-weight:700; font-size:9px; text-transform:uppercase; letter-spacing:.02em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   thead th:nth-child(n+4) { text-align:right; }
   tbody tr:nth-child(even) { background:#f9fafc; }
   tbody tr:hover { background:#f0f3f8; }
-  tbody td { padding:9px 12px; border-bottom:1px solid var(--border); }
+  tbody td { padding:7px 6px; border-bottom:1px solid var(--border); overflow:hidden; }
   tbody td:nth-child(n+4) { text-align:right; }
   tfoot tr { background:#f0f3f8; border-top:2px solid var(--border); }
-  tfoot td { padding:9px 12px; font-weight:800; }
+  tfoot td { padding:7px 6px; font-weight:800; font-size:11px; overflow:hidden; text-overflow:ellipsis; }
   tfoot td:nth-child(n+4) { text-align:right; }
-  .pct-bar { display:flex; align-items:center; gap:6px; }
-  .pct-track { width:44px; height:4px; background:#edf0f5; border-radius:2px; overflow:hidden; flex-shrink:0; }
+  .pct-bar { display:flex; align-items:center; gap:4px; }
+  .pct-track { width:28px; height:4px; background:#edf0f5; border-radius:2px; overflow:hidden; flex-shrink:0; }
   .pct-fill-bar { height:100%; border-radius:2px; }
-  .code-cell { font-weight:700; font-size:10px; color:var(--muted); white-space:nowrap; }
-  .name-cell  { font-weight:600; color:var(--primary); white-space:nowrap; }
-  .desc-cell  { color:var(--primary); max-width:180px; font-size:11px; }
-  .aic-cell   { font-weight:700; color:var(--primary); white-space:nowrap; }
-  .cob-cell   { white-space:nowrap; }
-  .pc-cell    { white-space:nowrap; }
+  .code-cell { font-weight:700; font-size:9px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .name-cell  { font-weight:600; color:var(--primary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .desc-cell  { color:var(--primary); font-size:10px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .aic-cell   { font-weight:700; color:var(--primary); white-space:nowrap; font-size:11px; }
+  .cob-cell   { white-space:nowrap; font-size:11px; }
+  .pc-cell    { white-space:nowrap; font-size:11px; }
 
   /* LOADER */
   @keyframes spin { to { transform:rotate(360deg); } }
@@ -211,10 +211,18 @@ function processItems(items) {
   for(const item of items) {
     const cv={};
     for(const c of item.column_values) cv[c.id]=c.text||"";
+    let clienteRel = "";
+    for(const c of item.column_values) {
+      if(c.id==="conectar_tableros__1") {
+        const li = c.linked_items || [];
+        if(li.length) clienteRel = li[0].name;
+      }
+    }
     const gid=item.group.id, estado=cv["estado__1"]||"";
     if(!gEst[gid]) gEst[gid]=[];
     if(estado) gEst[gid].push(estado);
-    if(!gMeta[gid]){ const[code,cliente,desc]=parseTitle(item.group.title); gMeta[gid]={title:item.group.title,code,cliente,desc}; }
+    if(!gMeta[gid]){ const[code,cliTitle,desc]=parseTitle(item.group.title); gMeta[gid]={title:item.group.title,code,cliente:cliTitle,desc}; }
+    if(clienteRel && !gMeta[gid].cliente) gMeta[gid].cliente = clienteRel;
     const tc=toFloat(cv["tc__1"]||"1")||1;
     const valor=toFloat(cv["valor_de_contrato__1"]), monto=toFloat(cv["monto__1"]), aic=toFloat(cv["numeric_mm442rdg"]);
     const cTotal=valor/tc, ratio=cTotal>0?aic/cTotal:1, mUsd=monto/tc;
@@ -222,15 +230,17 @@ function processItems(items) {
     const fF=cv["fecha_firma3__1"]||"", yF=fF.length>=4?+fF.slice(0,4):null;
     const yC=getYearCobro(cv);
     records.push({ gid, nameCode:getCode(item.name), estado, cobrado,
-      tipo:cv["color_mm40wfgs"]||"Sin clasificar", sector:cv["men__desplegable__1"]||"Sin sector",
+      tipo:cv["color_mm40wfgs"]||"Sin dato", sector:cv["men__desplegable__1"]||"Sin sector",
       aic, cobAic:cobrado==="Si"?mUsd*ratio:0, pcAic:cobrado==="No"?mUsd*ratio:0,
       yF, yC, yCpc:yC||2026 });
   }
-  const seen=new Set(), ventasH={}, byTipo2026={}, bySector2026={};
+  const seen=new Set(), ventasH={}, byTipo2026={}, bySector2026={}, byTipoHist={}, bySectorHist={};
   for(const r of records){
     const key=`${r.nameCode}_${r.yF}`;
     if(r.aic>0&&r.yF&&!seen.has(key)){
       seen.add(key); ventasH[r.yF]=(ventasH[r.yF]||0)+r.aic;
+      byTipoHist[r.tipo]=(byTipoHist[r.tipo]||0)+r.aic;
+      { const sKey = r.sector==="Sin sector" ? "Sin dato" : r.sector; bySectorHist[sKey]=(bySectorHist[sKey]||0)+r.aic; }
       if(r.yF===2026){ byTipo2026[r.tipo]=(byTipo2026[r.tipo]||0)+r.aic; bySector2026[r.sector]=(bySector2026[r.sector]||0)+r.aic; }
     }
   }
@@ -266,6 +276,7 @@ function processItems(items) {
   return {
     ventas2026:{total:Math.round(ventasH[2026]||0),n:[...seen].filter(k=>k.endsWith("_2026")).length,
       porTipo:top6(byTipo2026),porSector:top6(bySector2026)},
+    hist:{ porTipo:top6(byTipoHist), porSector:top6(bySectorHist) },
     cobrados2026:Math.round(cobrosH[2026]||0),
     cobradosTotal:Math.round(Object.values(cobrosH).reduce((s,v)=>s+v,0)),
     vendidoTotal:Math.round(Object.values(ventasH).reduce((s,v)=>s+v,0)),
@@ -340,16 +351,21 @@ function renderDashboard(d) {
         <div class="kpi-card" style="border-top-color:#e86040"><div class="label">Total hist. vendido AIC</div><div class="value">${fmtK(d.vendidoTotal)}</div><div class="sub">Ventas acumuladas todos los años</div></div>
       </div>
 
-      <div class="two-col">
-        <div class="card">
-          <div class="card-title">Por cobrar AIC — distribución anual</div>
-          ${progBar("2026",d.porCobrar.anio2026,d.porCobrar.total,"#1a3a5c")}
-          ${progBar("2027",d.porCobrar.anio2027,d.porCobrar.total,"#e8a020")}
-          <div class="divider"><span>Total</span><strong>${fmt(d.porCobrar.total)}</strong></div>
-        </div>
+      <div class="card">
+        <div class="card-title">Por cobrar AIC — distribución anual</div>
+        ${progBar("2026",d.porCobrar.anio2026,d.porCobrar.total,"#1a3a5c")}
+        ${progBar("2027",d.porCobrar.anio2027,d.porCobrar.total,"#e8a020")}
+        <div class="divider"><span>Total</span><strong>${fmt(d.porCobrar.total)}</strong></div>
+      </div>
+
+      <div class="two-col" style="margin-top:12px">
         <div class="card">
           <div class="card-title">Ventas AIC 2026 — por tipo</div>
           ${d.ventas2026.porTipo.map((t,i)=>progBar(t.name,t.value,d.ventas2026.total,PAL[i])).join("")}
+        </div>
+        <div class="card">
+          <div class="card-title">Ventas AIC Histórico — por tipo</div>
+          ${d.hist.porTipo.map((t,i)=>progBar(t.name,t.value,d.vendidoTotal,PAL[i])).join("")}
         </div>
       </div>
 
@@ -360,6 +376,17 @@ function renderDashboard(d) {
             const pct=d.ventas2026.total>0?Math.round(s.value/d.ventas2026.total*100):0;
             return `<div class="sector-box"><div class="pct" style="color:${PAL[i]}">${pct}%</div><div class="name">${s.name}</div><div class="val">${fmtK(s.value)}</div></div>`;
           }).join("")}
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:12px">
+        <div class="card-title">Ventas AIC Histórico — por sector</div>
+        <div class="sector-grid">
+          ${(()=>{ const totalSec=d.hist.porSector.reduce((s,x)=>s+x.value,0);
+            return d.hist.porSector.map((s,i)=>{
+              const pct=totalSec>0?Math.round(s.value/totalSec*100):0;
+              return `<div class="sector-box"><div class="pct" style="color:${PAL[i]}">${pct}%</div><div class="name">${s.name}</div><div class="val">${fmtK(s.value)}</div></div>`;
+            }).join(""); })()}
         </div>
       </div>
     </div>
@@ -380,6 +407,11 @@ function renderDashboard(d) {
       <div class="table-wrap">
         <div class="table-scroll">
           <table>
+            <colgroup>
+              <col style="width:8%"><col style="width:10%"><col style="width:24%">
+              <col style="width:12%"><col style="width:8%"><col style="width:12%">
+              <col style="width:12%"><col style="width:14%">
+            </colgroup>
             <thead><tr>
               <th>Código</th><th>Cliente</th><th>Proyecto</th>
               <th>Contrato AIC</th><th>% total</th><th>Cobrado AIC</th><th>Por cobrar AIC</th><th>% cobrado</th>
@@ -390,14 +422,14 @@ function renderDashboard(d) {
                 const pctC=p.pct;
                 const cColor=pctC>=60?"#1d8e72":pctC>=30?"#e8a020":"#6b7a8d";
                 return `<tr>
-                  <td class="code-cell">${p.code}</td>
-                  <td class="name-cell">${p.cliente||"—"}</td>
-                  <td class="desc-cell">${p.desc}</td>
+                  <td class="code-cell" title="${p.code}">${p.code}</td>
+                  <td class="name-cell" title="${p.cliente||"—"}">${p.cliente||"—"}</td>
+                  <td class="desc-cell" title="${p.desc}">${p.desc}</td>
                   <td class="aic-cell">${fmt(p.aic)}</td>
-                  <td><div class="pct-bar"><div class="pct-track"><div class="pct-fill-bar" style="width:${pctT}%;background:#7ea8d4"></div></div><span style="font-size:11px;color:#6b7a8d;min-width:28px">${pctT}%</span></div></td>
+                  <td><div class="pct-bar"><div class="pct-track"><div class="pct-fill-bar" style="width:${pctT}%;background:#7ea8d4"></div></div><span style="font-size:10px;color:#6b7a8d;min-width:22px">${pctT}%</span></div></td>
                   <td class="cob-cell" style="color:${p.cob>0?"#1d8e72":"#6b7a8d"}">${p.cob>0?fmt(p.cob):"—"}</td>
                   <td class="pc-cell"  style="color:${p.pc>0?"#e8a020":"#6b7a8d"}">${p.pc>0?fmt(p.pc):"—"}</td>
-                  <td><div class="pct-bar"><div class="pct-track"><div class="pct-fill-bar" style="width:${Math.min(pctC,100)}%;background:${cColor}"></div></div><span style="font-size:11px;font-weight:600;color:${cColor};min-width:34px">${pctC}%</span></div></td>
+                  <td><div class="pct-bar"><div class="pct-track"><div class="pct-fill-bar" style="width:${Math.min(pctC,100)}%;background:${cColor}"></div></div><span style="font-size:10px;font-weight:600;color:${cColor};min-width:28px">${pctC}%</span></div></td>
                 </tr>`;
               }).join("")}
             </tbody>
@@ -429,7 +461,7 @@ async function loadData() {
   if(btn){ btn.disabled=true; btn.textContent="Actualizando…"; }
   try {
     setLoadingMsg("Descargando contratos…");
-    const q = `{ boards(ids: [6739349342]) { items_page(limit:500) { items { id name group{id title} column_values(ids:["estado__1","cobrado__si_no___1","valor_de_contrato__1","tc__1","monto__1","numeric_mm442rdg","fecha_firma3__1","fecha4__1","cronograma__1","color_mm40wfgs","men__desplegable__1"]){id text} } } } }`;
+    const q = `{ boards(ids: [6739349342]) { items_page(limit:500) { items { id name group{id title} column_values(ids:["estado__1","cobrado__si_no___1","valor_de_contrato__1","tc__1","monto__1","numeric_mm442rdg","fecha_firma3__1","fecha4__1","cronograma__1","color_mm40wfgs","men__desplegable__1","conectar_tableros__1"]){id text ... on BoardRelationValue { linked_items { id name } }} } } } }`;
     const data = await mondayQuery(q, token);
     const items = data?.boards?.[0]?.items_page?.items;
     if(!items) throw new Error("No se encontraron datos en el tablero");
